@@ -64,6 +64,7 @@ const CUSTOMERS_INIT = [
     billingTiming:"先請求", billingPaymentMonth:"翌月",
     billingInvoiceNotes:"", billingMemo:"",
     assignedUserId:"u2",
+    slackChannelUrl:"https://slack.com/app_redirect?channel=alpha-project",
     notes:"大口顧客。毎月定例あり。",
   },
   {
@@ -80,6 +81,7 @@ const CUSTOMERS_INIT = [
     billingTiming:"当月請求", billingPaymentMonth:"翌月",
     billingInvoiceNotes:"", billingMemo:"",
     assignedUserId:"u3",
+    slackChannelUrl:"https://slack.com/app_redirect?channel=beta-shooji",
     notes:"",
   },
   {
@@ -96,6 +98,7 @@ const CUSTOMERS_INIT = [
     billingTiming:"", billingPaymentMonth:"",
     billingInvoiceNotes:"", billingMemo:"",
     assignedUserId:"u2",
+    slackChannelUrl:"",
     notes:"新規開拓中",
   },
 ]
@@ -1181,7 +1184,7 @@ function Customers({ customers, setCustomers, brands, users, currentRole }) {
         action={writable ? <PrimaryBtn onClick={openAdd}>＋ 顧客を追加</PrimaryBtn> : null} />
       {!writable && <ReadonlyBanner />}
 
-      <DataTable headers={["会社名","担当者名","電話番号","ブランド数","担当営業","登録日",""]}>
+      <DataTable headers={["会社名","担当者名","電話番号","ブランド数","Slack","担当営業","登録日",""]}>
         {customers.map(c => {
           const brandCount = brands.filter(b=>b.customerId===c.id).length
           const assignedUser = users.find(u=>u.id===c.assignedUserId)
@@ -1203,6 +1206,24 @@ function Customers({ customers, setCustomers, brands, users, currentRole }) {
                 color: brandCount>0 ? C.primary : C.textMuted,
                 fontSize:13, fontWeight:700,
               }}>{brandCount}</span>
+            </td>
+            <td style={{padding:"11px 16px", borderBottom:`1px solid ${C.divider}`, textAlign:"center"}}>
+              {c.slackChannelUrl ? (
+                <a href={c.slackChannelUrl} target="_blank" rel="noopener noreferrer"
+                  style={{display:"inline-flex", alignItems:"center", gap:4, padding:"3px 8px",
+                    background:"#4A154B", color:"#fff", fontSize:11, fontWeight:700,
+                    textDecoration:"none", border:"none"}}>
+                  <svg width="12" height="12" viewBox="0 0 54 54" fill="currentColor">
+                    <path d="M19.712.133a5.381 5.381 0 0 0-5.376 5.387 5.381 5.381 0 0 0 5.376 5.386h5.376V5.52A5.381 5.381 0 0 0 19.712.133m0 14.365H5.376A5.381 5.381 0 0 0 0 19.884a5.381 5.381 0 0 0 5.376 5.387h14.336a5.381 5.381 0 0 0 5.376-5.387 5.381 5.381 0 0 0-5.376-5.386"/>
+                    <path d="M53.76 19.884a5.381 5.381 0 0 0-5.376-5.386 5.381 5.381 0 0 0-5.376 5.386v5.387h5.376a5.381 5.381 0 0 0 5.376-5.387m-14.336 0V5.52A5.381 5.381 0 0 0 34.048.133a5.381 5.381 0 0 0-5.376 5.387v14.364a5.381 5.381 0 0 0 5.376 5.387 5.381 5.381 0 0 0 5.376-5.387"/>
+                    <path d="M34.048 54a5.381 5.381 0 0 0 5.376-5.387 5.381 5.381 0 0 0-5.376-5.386h-5.376v5.386A5.381 5.381 0 0 0 34.048 54m0-14.365h14.336a5.381 5.381 0 0 0 5.376-5.386 5.381 5.381 0 0 0-5.376-5.387H34.048a5.381 5.381 0 0 0-5.376 5.387 5.381 5.381 0 0 0 5.376 5.386"/>
+                    <path d="M0 34.249a5.381 5.381 0 0 0 5.376 5.386 5.381 5.381 0 0 0 5.376-5.386v-5.387H5.376A5.381 5.381 0 0 0 0 34.249m14.336 0v14.364A5.381 5.381 0 0 0 19.712 54a5.381 5.381 0 0 0 5.376-5.387V34.249a5.381 5.381 0 0 0-5.376-5.387 5.381 5.381 0 0 0-5.376 5.387"/>
+                  </svg>
+                  開く
+                </a>
+              ) : (
+                <span style={{fontSize:11, color:C.textMuted}}>—</span>
+              )}
             </td>
             <Td>{assignedUser?.name||"—"}</Td>
             <Td muted>{fmtD(c.createdAt)}</Td>
@@ -1378,6 +1399,32 @@ function Customers({ customers, setCustomers, brands, users, currentRole }) {
 
               {activeTab === "other" && (
                 <div>
+                  {/* Slack連携 */}
+                  <div style={{fontSize:12, fontWeight:700, color:C.textMuted, letterSpacing:"0.08em", marginBottom:12, paddingBottom:6, borderBottom:`1px solid ${C.divider}`}}>Slack連携</div>
+                  <FormField label="SlackチャンネルURL">
+                    <TextInput type="url" value={form.slackChannelUrl||""} onChange={f("slackChannelUrl")} placeholder="https://slack.com/app_redirect?channel=channel-name" />
+                    <p style={{margin:"4px 0 0", fontSize:12, color:C.textMuted, lineHeight:"1.5"}}>
+                      Slackのチャンネルリンクを登録すると、顧客一覧から直接そのチャンネルを開けます。<br/>
+                      ※ メッセージ検索連携は今後実装予定です。
+                    </p>
+                  </FormField>
+                  {form.slackChannelUrl && (
+                    <div style={{marginBottom:16}}>
+                      <a href={form.slackChannelUrl} target="_blank" rel="noopener noreferrer"
+                        style={{display:"inline-flex", alignItems:"center", gap:6, padding:"7px 14px",
+                          background:"#4A154B", color:"#fff", fontSize:13, fontWeight:700,
+                          textDecoration:"none"}}>
+                        <svg width="14" height="14" viewBox="0 0 54 54" fill="currentColor">
+                          <path d="M19.712.133a5.381 5.381 0 0 0-5.376 5.387 5.381 5.381 0 0 0 5.376 5.386h5.376V5.52A5.381 5.381 0 0 0 19.712.133m0 14.365H5.376A5.381 5.381 0 0 0 0 19.884a5.381 5.381 0 0 0 5.376 5.387h14.336a5.381 5.381 0 0 0 5.376-5.387 5.381 5.381 0 0 0-5.376-5.386"/>
+                          <path d="M53.76 19.884a5.381 5.381 0 0 0-5.376-5.386 5.381 5.381 0 0 0-5.376 5.386v5.387h5.376a5.381 5.381 0 0 0 5.376-5.387m-14.336 0V5.52A5.381 5.381 0 0 0 34.048.133a5.381 5.381 0 0 0-5.376 5.387v14.364a5.381 5.381 0 0 0 5.376 5.387 5.381 5.381 0 0 0 5.376-5.387"/>
+                          <path d="M34.048 54a5.381 5.381 0 0 0 5.376-5.387 5.381 5.381 0 0 0-5.376-5.386h-5.376v5.386A5.381 5.381 0 0 0 34.048 54m0-14.365h14.336a5.381 5.381 0 0 0 5.376-5.386 5.381 5.381 0 0 0-5.376-5.387H34.048a5.381 5.381 0 0 0-5.376 5.387 5.381 5.381 0 0 0 5.376 5.386"/>
+                          <path d="M0 34.249a5.381 5.381 0 0 0 5.376 5.386 5.381 5.381 0 0 0 5.376-5.386v-5.387H5.376A5.381 5.381 0 0 0 0 34.249m14.336 0v14.364A5.381 5.381 0 0 0 19.712 54a5.381 5.381 0 0 0 5.376-5.387V34.249a5.381 5.381 0 0 0-5.376-5.387 5.381 5.381 0 0 0-5.376 5.387"/>
+                        </svg>
+                        登録したチャンネルを開いて確認
+                      </a>
+                    </div>
+                  )}
+                  <div style={{borderTop:`1px solid ${C.divider}`, margin:"8px 0 16px"}} />
                   <FormField label="担当営業">
                     <TextInput select value={form.assignedUserId||""} onChange={f("assignedUserId")}>
                       <option value="">未割り当て</option>
@@ -2209,9 +2256,166 @@ function Tasks({ tasks, setTasks, customers, users, currentRole }) {
   )
 }
 
-// ─── メインアプリ ───────────────────────────────────────────
+// ─── ログイン画面 ───────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [step, setStep] = useState("idle")  // idle | redirecting | authing | done
+  const [selectedUser, setSelectedUser] = useState(null)
+
+  // モック用のGoogleアカウント（USERSから選択）
+  const MOCK_GOOGLE_ACCOUNTS = [
+    { userId:"u1", email:"yamashita@webrepo.jp",  name:"山下 太郎",  avatar:"山" },
+    { userId:"u2", email:"sato@webrepo.jp",       name:"佐藤 美咲",  avatar:"佐" },
+    { userId:"u3", email:"ito@webrepo.jp",        name:"伊藤 健二",  avatar:"伊" },
+    { userId:"u4", email:"watanabe@webrepo.jp",   name:"渡辺 愛",    avatar:"渡" },
+  ]
+
+  const handleGoogleLogin = () => {
+    setStep("redirecting")
+    // Google認証画面へのリダイレクトをシミュレート
+    setTimeout(() => setStep("authing"), 1200)
+  }
+
+  const handleSelectAccount = (account) => {
+    setSelectedUser(account)
+    setStep("done")
+    setTimeout(() => onLogin(account.userId), 1000)
+  }
+
+  return (
+    <div style={{
+      minHeight:"100vh", display:"flex", flexDirection:"column",
+      fontFamily:"'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif",
+      background:C.bg,
+    }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap'); * { box-sizing:border-box; }`}</style>
+
+      {/* ヘッダー */}
+      <div style={{background:C.sidebarBg, borderBottom:`3px solid ${C.primary}`, padding:"0 24px", height:56, display:"flex", alignItems:"center"}}>
+        <div style={{fontSize:12, fontWeight:700, color:C.primary, letterSpacing:"0.12em"}}>SALES TOOL</div>
+        <div style={{fontSize:11, color:"#595959", marginLeft:12}}>ウェブリポ 営業管理ツール</div>
+        <div style={{marginLeft:"auto"}}>
+          <span style={{fontSize:11, color:"#595959", padding:"3px 8px", border:"1px solid #3E3E40"}}>モックプレビュー版</span>
+        </div>
+      </div>
+
+      {/* メインコンテンツ */}
+      <div style={{flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:24}}>
+
+        {/* idle: ログインボタン */}
+        {step === "idle" && (
+          <div style={{background:C.bgWhite, border:`1px solid ${C.border}`, borderTop:`3px solid ${C.primary}`, padding:"40px 48px", width:"100%", maxWidth:400, textAlign:"center"}}>
+            <div style={{fontSize:11, fontWeight:700, color:C.primary, letterSpacing:"0.12em", marginBottom:8}}>SALES TOOL</div>
+            <h1 style={{fontSize:22, fontWeight:700, color:C.text, margin:"0 0 4px"}}>営業管理ツール</h1>
+            <p style={{fontSize:13, color:C.textMuted, margin:"0 0 32px"}}>ウェブリポ社内向け</p>
+
+            <button onClick={handleGoogleLogin} style={{
+              display:"flex", alignItems:"center", justifyContent:"center", gap:12,
+              width:"100%", padding:"12px 24px",
+              border:`1px solid ${C.border}`, background:C.bgWhite,
+              fontSize:14, fontWeight:700, color:C.text, cursor:"pointer",
+              fontFamily:"inherit", transition:"background 0.1s",
+            }}
+              onMouseEnter={e=>e.currentTarget.style.background=C.bgHover}
+              onMouseLeave={e=>e.currentTarget.style.background=C.bgWhite}
+            >
+              {/* Google ロゴ */}
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Googleアカウントでログイン
+            </button>
+
+            <p style={{fontSize:11, color:C.textMuted, marginTop:20, lineHeight:"1.6"}}>
+              ※ ウェブリポの Google Workspace アカウントでのみログインできます。
+            </p>
+
+            {/* モック説明 */}
+            <div style={{marginTop:24, padding:"12px 16px", background:C.warningBg, border:`1px solid ${C.warning}`, borderLeft:`3px solid ${C.warning}`, textAlign:"left"}}>
+              <p style={{margin:0, fontSize:12, color:C.warning, fontWeight:700, marginBottom:4}}>モックプレビュー版</p>
+              <p style={{margin:0, fontSize:11, color:C.warning, lineHeight:"1.6"}}>
+                実際のGoogle認証は行いません。次の画面でアカウントを選択してください。
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* redirecting: Googleへリダイレクト中 */}
+        {step === "redirecting" && (
+          <div style={{textAlign:"center"}}>
+            <div style={{
+              width:48, height:48, border:`3px solid ${C.border}`,
+              borderTop:`3px solid ${C.primary}`,
+              borderRadius:"50%", margin:"0 auto 24px",
+              animation:"spin 0.8s linear infinite",
+            }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            <p style={{fontSize:14, color:C.textSub, fontWeight:700}}>Googleの認証画面へ移動しています...</p>
+            <p style={{fontSize:12, color:C.textMuted, marginTop:8}}>accounts.google.com</p>
+          </div>
+        )}
+
+        {/* authing: Googleアカウント選択（モック） */}
+        {step === "authing" && (
+          <div style={{background:C.bgWhite, border:`1px solid ${C.border}`, padding:"32px 40px", width:"100%", maxWidth:400}}>
+            {/* Google風ヘッダー */}
+            <div style={{textAlign:"center", marginBottom:24}}>
+              <svg width="75" height="24" viewBox="0 0 75 24" style={{marginBottom:8}}>
+                <path fill="#4285F4" d="M33.994 10.209c0-.94-.084-1.84-.241-2.702H24v5.11h5.602c-.241 1.295-1.004 2.393-2.137 3.13v2.603h3.46c2.023-1.862 3.07-4.605 3.07-8.14z"/>
+                <path fill="#34A853" d="M24 18.5c2.8 0 5.147-.928 6.862-2.51l-3.46-2.61c-.928.62-2.116.986-3.402.986-2.617 0-4.832-1.767-5.62-4.14H14.8v2.694C16.507 16.583 20.045 18.5 24 18.5z"/>
+                <path fill="#FBBC05" d="M18.38 10.226c-.2-.619-.314-1.277-.314-1.977s.114-1.358.314-1.977V3.577h-3.58C13.9 5.07 13.5 6.98 13.5 9.0c0 1.02.17 2.004.47 2.926l3.41-2.7z"/>
+                <path fill="#EA4335" d="M24 4.886c1.473 0 2.795.506 3.836 1.498l2.876-2.876C28.872 1.89 26.6 1 24 1c-3.955 0-7.493 1.917-9.2 4.923l3.58 2.627C19.168 6.18 21.383 4.886 24 4.886z"/>
+              </svg>
+              <p style={{fontSize:16, fontWeight:700, color:"#202124", margin:"8px 0 4px"}}>アカウントの選択</p>
+              <p style={{fontSize:13, color:"#5f6368", margin:0}}>sales-tool.webrepo.jp に移動</p>
+            </div>
+
+            {/* アカウント一覧 */}
+            <div style={{border:`1px solid #dadce0`}}>
+              {MOCK_GOOGLE_ACCOUNTS.map((acc, i) => (
+                <button key={acc.userId} onClick={()=>handleSelectAccount(acc)} style={{
+                  display:"flex", alignItems:"center", gap:14, width:"100%",
+                  padding:"12px 20px", background:"none", border:"none",
+                  borderBottom: i < MOCK_GOOGLE_ACCOUNTS.length-1 ? "1px solid #f1f3f4" : "none",
+                  cursor:"pointer", textAlign:"left", fontFamily:"inherit",
+                }}
+                  onMouseEnter={e=>e.currentTarget.style.background="#f8f9fa"}
+                  onMouseLeave={e=>e.currentTarget.style.background="none"}
+                >
+                  <div style={{width:36, height:36, borderRadius:"50%", background:"#4285F4", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, flexShrink:0}}>{acc.avatar}</div>
+                  <div>
+                    <div style={{fontSize:14, fontWeight:500, color:"#202124"}}>{acc.name}</div>
+                    <div style={{fontSize:12, color:"#5f6368"}}>{acc.email}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <p style={{fontSize:11, color:C.textMuted, textAlign:"center", marginTop:16}}>※ モック：実際のGoogle認証は行いません</p>
+          </div>
+        )}
+
+        {/* done: 認証完了 */}
+        {step === "done" && selectedUser && (
+          <div style={{textAlign:"center"}}>
+            <div style={{
+              width:52, height:52, background:C.success, borderRadius:"50%",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              margin:"0 auto 20px", fontSize:24, color:"#fff",
+            }}>✓</div>
+            <p style={{fontSize:16, fontWeight:700, color:C.text}}>{selectedUser.name} さんとしてログイン中</p>
+            <p style={{fontSize:13, color:C.textMuted, marginTop:4}}>ダッシュボードへ移動しています...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 export default function App() {
-  // モック用：ログインユーザーを切り替えて権限テストができる
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentUserId, setCurrentUserId] = useState("u1")
   const [view, setView]             = useState("dashboard")
   const [users, setUsers]           = useState(USERS_INIT)
@@ -2222,6 +2426,17 @@ export default function App() {
   const [deals,     setDeals]       = useState(DEALS_INIT)
   const [activities,setActivities]  = useState(ACTIVITIES_INIT)
   const [tasks,     setTasks]       = useState(TASKS_INIT)
+
+  const handleLogin = (userId) => {
+    setCurrentUserId(userId)
+    setIsLoggedIn(true)
+    setView("dashboard")
+  }
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setView("dashboard")
+  }
 
   const currentUser = users.find(u=>u.id===currentUserId) || users[0]
   const currentRole = currentUser.role
@@ -2236,6 +2451,8 @@ export default function App() {
   const p = { customers, setCustomers, staging, setStaging, brands, setBrands, plans, setPlans, deals, setDeals, activities, setActivities, tasks, setTasks, users, currentRole }
 
   const visibleNav = NAV_ITEMS.filter(n=>n.roles.includes(currentRole))
+
+  if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />
 
   return (
     <div style={{display:"flex", height:"100vh", overflow:"hidden", fontFamily:"'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Meiryo',sans-serif", background:C.bg, color:C.text}}>
@@ -2297,10 +2514,13 @@ export default function App() {
             <div style={{width:24, height:24, background:C.primary, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#fff", flexShrink:0}}>
               {currentUser.name.charAt(0)}
             </div>
-            <div>
+            <div style={{flex:1}}>
               <div style={{fontSize:12, fontWeight:700, color:C.sidebarActive, lineHeight:"1.3"}}>{currentUser.name}</div>
               <StatusBadge cfg={ROLES[currentRole]} />
             </div>
+            <button onClick={handleLogout} style={{background:"none", border:"1px solid #3E3E40", color:"#767676", fontSize:10, padding:"2px 6px", cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>
+              ログアウト
+            </button>
           </div>
         </div>
       </aside>
