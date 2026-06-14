@@ -52,7 +52,7 @@ const USERS_INIT = [
 const CUSTOMERS_INIT = [
   {
     id:"c1", createdAt:"2026-01-15",
-    compId:"COMP-0001",
+    compId:"90041",
     companyName:"株式会社アルファ", companyNameKana:"カブシキガイシャアルファ",
     corporateNumber:"1234567890123", phone:"03-1234-5678", siteUrl:"https://alpha.co.jp",
     zip:"1000001", address:"東京都千代田区千代田",
@@ -69,7 +69,7 @@ const CUSTOMERS_INIT = [
   },
   {
     id:"c2", createdAt:"2026-02-10",
-    compId:"COMP-0002",
+    compId:"90118",
     companyName:"ベータ商事", companyNameKana:"ベータショウジ",
     corporateNumber:"", phone:"06-2345-6789", siteUrl:"",
     zip:"5300001", address:"大阪府大阪市北区梅田",
@@ -86,7 +86,7 @@ const CUSTOMERS_INIT = [
   },
   {
     id:"c3", createdAt:"2026-03-05",
-    compId:"COMP-0003",
+    compId:"90237",
     companyName:"ガンマ工業", companyNameKana:"ガンマコウギョウ",
     corporateNumber:"", phone:"052-3456-7890", siteUrl:"https://gamma.co.jp",
     zip:"4600001", address:"愛知県名古屋市中区栄",
@@ -152,7 +152,7 @@ const STAGES = [
 
 const BRANDS_INIT = [
   {
-    id:"b1", createdAt:"2026-01-20", chainId:"CHAIN-0001",
+    id:"b1", createdAt:"2026-01-20", chainId:"52010",
     brandName:"アルファFC", customerId:"c1",
     contractStatus:"active", plan:"スペシャルプラン", monthlyFee:400000,
     contractTerm:"6ヶ月", contractStartDate:"2026-02-01", nextRenewalDate:"2027-01-31",
@@ -167,7 +167,7 @@ const BRANDS_INIT = [
     assignedUserId:"u2", notes:"主力ブランド",
   },
   {
-    id:"b2", createdAt:"2026-02-15", chainId:"CHAIN-0002",
+    id:"b2", createdAt:"2026-02-15", chainId:"52011",
     brandName:"アルファFC プレミアム", customerId:"c1",
     contractStatus:"reviewing", plan:"スペシャルプラン", monthlyFee:400000,
     contractTerm:"6ヶ月", contractStartDate:"", nextRenewalDate:"",
@@ -181,7 +181,7 @@ const BRANDS_INIT = [
     assignedUserId:"u2", notes:"審査書類確認中",
   },
   {
-    id:"b3", createdAt:"2026-03-01", chainId:"CHAIN-0003",
+    id:"b3", createdAt:"2026-03-01", chainId:"52034",
     brandName:"ベータ商事FC", customerId:"c2",
     contractStatus:"contracted", plan:"スタンダードプラン", monthlyFee:150000,
     contractTerm:"6ヶ月", contractStartDate:"2026-04-01", nextRenewalDate:"2026-09-30",
@@ -701,7 +701,7 @@ function MasterManagement({ plans, setPlans }) {
           <table style={{width:"100%", borderCollapse:"collapse"}}>
             <thead>
               <tr style={{background:C.sidebarBg}}>
-                {["順序","プラン名","月額利用料","備考","操作"].map(h=>(
+                {["順序","プラン名","月額利用料（税抜）","備考","操作"].map(h=>(
                   <th key={h} style={{textAlign:"left", padding:"10px 16px", fontSize:12, fontWeight:700, letterSpacing:"0.08em", color:C.sidebarText, borderBottom:`1px solid ${C.borderStrong}`, whiteSpace:"nowrap"}}>{h}</th>
                 ))}
               </tr>
@@ -749,7 +749,7 @@ function MasterManagement({ plans, setPlans }) {
           <FormField label="プラン名" required>
             <TextInput value={planForm.name||""} onChange={fp("name")} placeholder="〇〇プラン" />
           </FormField>
-          <FormField label="月額利用料（円）">
+          <FormField label="月額利用料（円・税抜）">
             <TextInput type="number" value={planForm.monthlyFee||""} onChange={fp("monthlyFee")} placeholder="100000" />
             {planForm.monthlyFee && <p style={{margin:"3px 0 0", fontSize:11, color:C.textMuted}}>{fmt(planForm.monthlyFee)}</p>}
           </FormField>
@@ -1261,8 +1261,11 @@ function Customers({ customers, setCustomers, brands, users, currentRole }) {
 
               {activeTab === "company" && (
                 <div>
-                  <FormField label="会社ID（comp_id）">
-                    <TextInput value={form.compId||""} onChange={f("compId")} placeholder="COMP-0001（自動採番も可）" />
+                  <FormField label="KAMAnza企業ID（comp_id）">
+                    <TextInput value={form.compId||""} onChange={f("compId")} placeholder="例: 90041（KAMAnza登録後に手入力）" />
+                    <p style={{margin:"4px 0 0", fontSize:11, color:C.textMuted, lineHeight:"1.5"}}>
+                      KAMAnzaに登録すると採番される企業ID。MF請求書の顧客コード（m+企業ID）の生成元になります。
+                    </p>
                   </FormField>
                   <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12}}>
                     <FormField label="会社名" required>
@@ -1494,6 +1497,16 @@ const splitAddress = addr => {
 function exportCSV(brands, customers, users) {
   const active = brands.filter(b => b.contractStatus === "active")
 
+  // comp_id未登録（KAMAnza未登録）のブランドは顧客コードが空欄になるため警告
+  const missingCode = active.filter(b => {
+    const c = customers.find(x => x.id === b.customerId)
+    return !c?.compId
+  })
+  if (missingCode.length > 0) {
+    const names = missingCode.map(b => b.brandName).join("、")
+    if (!confirm(`次のブランドはKAMAnza企業ID（comp_id）が未登録のため、顧客コードが空欄で出力されます：\n${names}\n\nこのまま出力しますか？`)) return
+  }
+
   const headers = [
     "顧客コード", "名称", "名称(カナ)", "敬称",
     "支払い期限(月)", "支払い期限(日)", "土日祝日",
@@ -1505,7 +1518,8 @@ function exportCSV(brands, customers, users) {
 
   const rows = active.map(b => {
     const c    = customers.find(x => x.id === b.customerId) || {}
-    const u    = users.find(x => x.id === b.assignedUserId) || {}
+    // 自社担当者名: ブランドの担当 → なければ顧客の主担当にフォールバック
+    const u    = users.find(x => x.id === (b.assignedUserId || c.assignedUserId)) || {}
     const addr = splitAddress(c.address)
 
     // 請求先情報を優先、なければ担当者情報にフォールバック
@@ -1514,13 +1528,13 @@ function exportCSV(brands, customers, users) {
     const contactName  = b.signerName  || c.billingName  || c.contactName  || ""
     const contactPhone = c.billingPhone|| c.phone        || ""
     const contactEmail = b.signerEmail || c.billingEmail || c.contactEmail || ""
-    const ccEmail      = c.notifyEmail || ""
+    const ccEmail      = b.notifyEmail || ""   // 資料請求通知先メール（ブランド側）
 
     // Peppol ID: 法人番号がある場合は "0088:{法人番号}" 形式
     const peppolId = c.corporateNumber ? `0088:${c.corporateNumber}` : ""
 
-    // 顧客コード: 実運用ではMF側のコードを顧客DBに持たせると一致させやすい
-    const customerCode = c.id.toUpperCase()
+    // 顧客コード: KAMAnza企業ID（comp_id）から m{comp_id} で生成。未登録なら空欄
+    const customerCode = c.compId ? `m${c.compId}` : ""
 
     return [
       customerCode,
@@ -1533,7 +1547,7 @@ function exportCSV(brands, customers, users) {
       fmtZip(c.zip),
       addr.pref,
       addr.rest,
-      "",               // 住所2（建物名は現DBから削除済み）
+      c.addressLine2 || "",   // 住所2（建物名・部屋番号）
       contactDept,
       contactTitle,
       contactName,
@@ -1734,8 +1748,8 @@ function Brands({ brands, setBrands, customers, users, plans, currentRole }) {
               {/* 基本情報 */}
               <div style={{fontSize:12, fontWeight:700, color:C.textMuted, letterSpacing:"0.08em", marginBottom:12, paddingBottom:6, borderBottom:`1px solid ${C.divider}`}}>基本情報</div>
               <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12}}>
-                <FormField label="チェーンID（chain_id）">
-                  <TextInput value={form.chainId||""} onChange={f("chainId")} placeholder="CHAIN-0001" />
+                <FormField label="KAMAnzaチェーンID（chain_id）">
+                  <TextInput value={form.chainId||""} onChange={f("chainId")} placeholder="例: 52010（KAMAnza登録後に手入力）" />
                 </FormField>
                 <FormField label="ブランド名" required>
                   <TextInput value={form.brandName||""} onChange={f("brandName")} placeholder="〇〇FC" />
@@ -1772,7 +1786,7 @@ function Brands({ brands, setBrands, customers, users, plans, currentRole }) {
                     {plans.map(p=><option key={p.id} value={p.name}>{p.name}（{fmt(p.monthlyFee)}/月）</option>)}
                   </TextInput>
                 </FormField>
-                <FormField label="月額利用料（円）">
+                <FormField label="月額利用料（円・税抜）">
                   <TextInput type="number" value={form.monthlyFee||""} onChange={f("monthlyFee")} placeholder="100000" />
                   {form.monthlyFee && <p style={{margin:"3px 0 0", fontSize:11, color:C.textMuted}}>{fmt(form.monthlyFee)}</p>}
                 </FormField>
